@@ -1,7 +1,6 @@
 # A2B protocol White Paper - v0.1
 
-Introduction
-------------
+## Introduction
 
 The A2B protocol is a **decentralized non-fungible token (NFT) finance** protocol that stores and redirects revenue generated from NFTs. This protocol operates on the application layer and is built on top of the Ethereum network.
 
@@ -17,8 +16,7 @@ The dynamic blockchain economy established by the A2B protocol is composed of th
 
 This document presents the components and mechanisms of the A2B protocol and how it creates a new dynamic token economy. Simplified code blocks are included in various sections for illustration purpose. Additionally, this white paper includes examples of use cases that can benefit from the protocol in the dynamic token economy.
 
-ERC 1155 Incorporation
-----------------------
+## ERC 1155 Incorporation
 
 The A2B protocol leverages the ERC-1155 standard, which efficiently manages both fungible (ERC-20) and non-fungible (ERC-721) tokens within a single smart contract. Compared to ERC-20 and ERC-721, ERC-1155 offers better efficiency in terms of data size, latency, and contract creation and token transfer costs.
 
@@ -35,8 +33,7 @@ Each MT also follows the A2B protocol's basic rules,
 
 Note that the requirement of mature date and restriction on MT fungible token amount can be changed by A2B DAO.
 
-Mechanical Cummunity Treasury (MCT)
------------------------------------
+## Mechanical Cummunity Treasury (MCT)
 
 ### Creation
 
@@ -63,12 +60,12 @@ function _initialize_ntp(uint256 nft_id, uint256 distribution_factor, uint256 th
 
 Revenue enters a specific NFT Token Pool (NTP) in two scenarios,
 
--   When a NFT is transferred from one address to another address, and there's a fee (ex. royalties) collected by the NFT's creator, a portion of that fee will be sent to this NFT's corresponding NTP
+-   A NFT is transferred from one address to another address, and there's a fee (ex. royalties) collected by the NFT's creator, a portion of that fee will be sent to this NFT's corresponding NTP
 -   A third party directly sends tokens to a NFT's corresponding NTP
 
 #### Scenario I
 
-The `transferFrom` function, consistent with the ERC-721 and ERC-1155 standards, is utilized to move the NFT from the sender's address to the receiver's address. In addition, a fee is reserved as royalties for the creator of the NFT. A portion of the royalty fee is then directed to the NFT Token Pool, based on a fixed distribution factor that is set by the smart contract owner at the time of NFT and NTP creation. The distribution factor, a value ranging from 0 to 100, inclusive, determines the proportion of the fee that goes into the NFT Token Pool.
+The `transferFrom` function, consistent with the ERC-721 and ERC-1155 standards, is utilized to move the NFT from the sender's address to the receiver's address. In addition, a fee is reserved as royalties for the creator of the NFT. A portion of the fee is then directed to the NFT Token Pool, based on a fixed distribution factor that is set by the smart contract owner at the time of NFT and NTP creation. The distribution factor, a value ranging from 0 to 100, inclusive, determines the proportion of the fee that goes into the NFT Token Pool.
 
 ```
 function transferFrom(address _from, address _to, uint256 _nft_id, uint256 total_fee) public {
@@ -83,10 +80,10 @@ function transferFrom(address _from, address _to, uint256 _nft_id, uint256 total
 
 #### Scenario II
 
-A `sendTo``NTP` function is used to allow third parties to directly send tokens into the NTP associated with a certain NFT. A third party can be another on chain protocol, or an off chain party integrated with A2B protocol.
+A `sendToNTP` function is used to allow third parties to directly send tokens into the NTP associated with a certain NFT. A third party can be another on chain protocol, or an off chain party integrated with A2B protocol.
 
 ```
-function sendToRevenuePool(uint256 _nft_id, uint256 fee) public {
+function sendToNTP(uint256 _nft_id, uint256 fee) public {
     require(fee > 0, "fee needs to be greater than 0");
     require(mechanic_cummunity_treasury[_nft_id] != address(0), "token pool does not exist yet");
     _send(mechanic_cummunity_treasury[_nft_id], fee);
@@ -97,10 +94,9 @@ function sendToRevenuePool(uint256 _nft_id, uint256 fee) public {
 
 Once the tokens stored inside MCT's NTP reach a predefined threshold, a token batch is formed. By default, this token batch will automatically be used to purchase fungible tokens in the corresponding AMM exchange of this A2B smart contract. After the fungible tokens are purchased, they will be burned, thereby reducing the circulation of fungible tokens and injecting more liquidity, creating a deflationary effect on fungible tokens.
 
-Fungible token holders have the power to create proposals regarding the usage of a token batch within MCT, and to vote on these proposals. For instance, FT holders could propose the distribution of a token batch to current FT holders, and then vote on it. If no proposal wins a majority, the token batch will still be used to purchase and burn the fungible tokens in the corresponding AMM. Each proposal only applies to one token batch. Therefore, if FT holders have long-term plans for tokens in MCT, they must continually propose and vote on their preferred proposal.
+Fungible token holders have the power to create proposals regarding the usage of a single token batch within MCT, and to vote on these proposals. For example, if the contract owner is an artist, FT holders can propose to use the token batch to purchase new equipment so that the artist can create better artwork for fans to enjoy. FT holders can also propose distributing a token batch to current FT holders. If no proposal wins a majority, the token batch will still be used to purchase and burn the fungible tokens in the corresponding AMM. Each proposal only applies to one token batch. Therefore, if FT holders have long-term plans for tokens in MCT, they must continually propose and vote on their preferred proposal.
 
-Automated Market Maker (AMM)
-----------------------------
+## Automated Market Maker (AMM)
 
 The A2B protocol features an Automated Market Maker (AMM), which is a decentralized exchange that enables the trading of assets on-chain. This exchange is specifically designed for trading the fungible tokens within the A2B protocol. When a smart contract is created in A2B, a corresponding exchange between the fungible tokens and ETH is established using the A2B factory/registry contract.
 
@@ -112,8 +108,7 @@ Initially, the exchange has no liquidity, but anyone who holds the fungible toke
 
 Liquidity providers in an A2B exchange receive liquidity tokens to represent their contributions, and they receive 0.25% of the total transaction amount as reward.
 
-Metadata Updater (MU)
----------------------
+## Metadata Updater (MU)
 
 When a new NFT is created in an A2B smart contract, it's accompanied by a file containing its genesis metadata that is stored on a decentralized file storage network. Unlike regular ERC-1155 or ERC-721 protocols, A2B provides a mechanism for updating the metadata associated with a specific NFT, which makes the NFT dynamic and opens up countless possibilities.
 
@@ -150,8 +145,7 @@ function update(uint256 token_id, uint256 updated_Metadata_uri) { // token_id re
 }
 ```
 
-Fee Structure
--------------
+## Fee Structure
 
 When an A2B smart contract is created, the contract creator must pay a gas fee, but no additional fees are required for creating new contracts. Once the accumulated consumed tokens in ETH inside MCT exceeds 10 ETH, the A2B protocol will charge fees for following events,
 
@@ -162,8 +156,7 @@ As discussed in the AMM section, there is also a 0.25% fee for all AMM transacti
 
 It's important to note that the percentage of all these fees is subject to change by A2B DAO.
 
-Examples
---------
+## Examples
 
 The possibilities for using A2B protocol are vast. Following are examples to illustrate the general philosophy.
 
