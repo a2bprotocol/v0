@@ -2,17 +2,17 @@
 
 ## Introduction
 
-The A2B protocol is a **decentralized non-fungible token (NFT) finance** protocol that stores and redirects revenue generated from NFTs. This protocol operates on the application layer and is built on top of the Ethereum network.
+The A2B protocol is a **decentralized non-fungible token (NFT) finance** protocol that routes revenue generated from NFTs. This protocol operates on the application layer and is built on top of the Ethereum network.
 
 Currently, three well-known protocols, ERC-20, ERC-721, and ERC-1155, form the blockchain economy based on the exchange and valuation of either fungible or non-fungible tokens individually. However, the A2B protocol is the first to establish a dynamic blockchain economy by combining fungible and non-fungible tokens through automatic procedures.
 
 The dynamic blockchain economy established by the A2B protocol is composed of three crucial components:
 
-1.  Mechanical Community Treasury (MCT): This is created as repository for NFT generated revenue.
+1.  ERC-1155 Incorporation: This allows A2B protocol to integrate seemlessly into existing ecosystem, and easily supported both fungible token and non-fungible token. 
 2.  Automated Market Maker (AMM): This allows market participants and fungible token (FT) holders to trade FTs efficiently. Anyone who owns FTs can provide liquidity to the liquidity pool that is generated along with contract creation.
 3.  Metadata Updater (MU): This provides NFT owners the ability to update the metadata of their NFT, encouraging creativity and personalization. This also makes NFT ownership resemble physical object ownership, where the owner has control over their subjects.
 
-![](https://github.com/a2bprotocol/v0/blob/main/infra_diagram.png)
+![](infra_diagram.png)
 
 This document presents the components and mechanisms of the A2B protocol and how it creates a new dynamic token economy. Simplified code blocks are included in various sections for illustration purpose. Additionally, this white paper includes examples of use cases that can benefit from the protocol in the dynamic token economy.
 
@@ -28,73 +28,74 @@ In the A2B smart contract, the owner has the authority to mint the fungible toke
 
 Each MT also follows the A2B protocol's basic rules,
 
--   sum of MT fungible token amount, current circulating fungible token amount, and burned fungible token amount cannot exceed the total supply of fungible token amount defined in the smart contract
--   MT fungible token amount must be less than 10%* of the current circulating amount
+- sum of MT fungible token amount, current circulating fungible token amount, and burned fungible token amount cannot exceed the total supply of fungible token amount defined in the smart contract
+- MT fungible token amount must be less than 10%* of the current circulating amount
 
 Note that the requirement of mature date and restriction on MT fungible token amount can be changed by A2B DAO.
 
-## Mechanical Cummunity Treasury (MCT)
+### NFT Revenue Routing
 
-### Creation
-
-Every time an NFT is minted in an A2B smart contract, an address known as the **NFT Token Pool (NTP)** is established alongside the NFT. The combination of all NTP forms **Mechanical Cummunity Treasury (MCT)**. The NTP is created at the time of NFT creation with no initial token quantity and can only be linked to a single NFT. The relationship between an NFT and its associated NTP is enforced through a one-to-one mapping at the protocol level of the A2B.
+Under the A2B smart contract, NFT controls revenue inflow. Every time an NFT is minted in an A2B smart contract, an address known as the **NFT Token Buffer (NTB)** is established alongside the NFT. The NTB is created at the time of NFT creation with no initial token quantity and can only be linked to a single NFT. The relationship between an NFT and its associated NTB is enforced through a one-to-one mapping at the protocol level of the A2B.
 
 ```
-mapping(uint256 => address) mechanic_cummunity_treasury;
-mapping(address => uint256) token_pool_nft;
-mapping(uint256 => uint8) ntp_distribution_factor; // [0, 100]
-mapping(uint256 => uint8) ntp_distribution_threshold;
+mapping(uint256 => address) nft_to_ntb;
+mapping(address => uint256) ntb_to_nft;
+mapping(uint256 => uint8) ntb_distribution_factor; // [0, 100]
 
-function _initialize_ntp(uint256 nft_id, uint256 distribution_factor, uint256 threshold) private{
+function _initialize_ntb(uint256 nft_id, uint256 distribution_factor) private {
     require(distribution_factor >= 0 && distribution_factor <= 100, "distribution factor is out of range");
 
-    address ntp_address = _generate_address();
-    mechanic_cummunity_treasury[nft_id] = ntp_address;
-    token_pool_nft[ntp_address] = nft_id;
-    ntp_distribution_factor[nft_id] = distribution_factor;
-    ntp_distribution_threshold[nft_id] = threshold;
+    address ntb_address = _generate_address();
+    nft_to_ntb[nft_id] = ntb_address;
+    ntb_to_nft[ntb_address] = nft_id;
+    ntb_distribution_factor[nft_id] = distribution_factor;
 }
 ```
 
-### Revenue Inflow
+Revenue enters a specific NFT Token Buffer (NTB) under two scenarios,
 
-Revenue enters a specific NFT Token Pool (NTP) in two scenarios,
-
--   A NFT is transferred from one address to another address, and there's a fee (ex. royalties) collected by the NFT's creator, a portion of that fee will be sent to this NFT's corresponding NTP
--   A third party directly sends tokens to a NFT's corresponding NTP
+- A NFT is transferred from one address to another address, and there's a fee (ex. royalties) collected by the NFT's creator, a portion of that fee will be sent to this NFT's corresponding NTB
+- A third party directly sends tokens to a NFT's corresponding NTB
 
 #### Scenario I
 
-The `transferFrom` function, consistent with the ERC-721 and ERC-1155 standards, is utilized to move the NFT from the sender's address to the receiver's address. In addition, a fee is reserved as royalties for the creator of the NFT. A portion of the fee is then directed to the NFT Token Pool, based on a fixed distribution factor that is set by the smart contract owner at the time of NFT and NTP creation. The distribution factor, a value ranging from 0 to 100, inclusive, determines the proportion of the fee that goes into the NFT Token Pool.
+The `transferFrom` function, consistent with the ERC-721 and ERC-1155 standards, is utilized to move the NFT from the sender's address to the receiver's address. In addition, a fee is reserved as royalties for the creator of the NFT. A portion of the fee is then routed to the NFT Token Buffer, based on a fixed distribution factor that is set by the smart contract owner at the time of NFT and NTB creation. The distribution factor, a value ranging from 0 to 100, inclusive, determines the proportion of the fee that goes into the NFT Token Buffer.
 
 ```
 function transferFrom(address _from, address _to, uint256 _nft_id, uint256 total_fee) public {
-    uint256 ntp_distribution_fee = total_fee * ntp_distribution_factor[_nft_id];
-    uint256 remaining_owner_fee = total_fee - ntp_distribution_fee;
+    uint256 ntb_distribution_fee = total_fee * ntb_distribution_factor[_nft_id];
+    uint256 remaining_owner_fee = total_fee - ntb_distribution_fee;
 
     _transfer_nft(_from, _to, _nft_id);
-    _send(mechanic_cummunity_treasury[_nft_id], ntp_distribution_fee);
+    _send(nft_to_ntb[_nft_id], ntb_distribution_fee);
     _send(contract_owner, remaining_owner_fee)
 }
 ```
 
 #### Scenario II
 
-A `sendToNTP` function is used to allow third parties to directly send tokens into the NTP associated with a certain NFT. A third party can be another on chain protocol, or an off chain party integrated with A2B protocol.
+A `sendToNFT` function is used to allow third parties to directly send tokens into the NTB associated with a certain NFT. A third party can be another on chain address, or an off chain party integrated with A2B protocol.
 
 ```
-function sendToNTP(uint256 _nft_id, uint256 fee) public {
+function sendToNFT(uint256 _nft_id, uint256 fee) public {
     require(fee > 0, "fee needs to be greater than 0");
-    require(mechanic_cummunity_treasury[_nft_id] != address(0), "token pool does not exist yet");
-    _send(mechanic_cummunity_treasury[_nft_id], fee);
+    require(nft_to_ntb[_nft_id] != address(0), "token pool does not exist yet");
+    _send(nft_to_ntb[_nft_id], fee);
 }
 ```
 
-### Mechanical Consumption
+A NTB doesn't hold any token. Once tokens reached a NTB, they are routed directly to the contract's corresponding AMM to swap for contract's own fungible token. This in will increase the Ethereum balance in liquidity pool, and provide better liquidity for the fungible token.
 
-Once the tokens stored inside MCT's NTP reach a predefined threshold, a token batch is formed. By default, this token batch will automatically be used to purchase fungible tokens in the corresponding AMM exchange of this A2B smart contract. After the fungible tokens are purchased, they will be burned, thereby reducing the circulation of fungible tokens and injecting more liquidity, creating a deflationary effect on fungible tokens.
+```
+event NtpSwap(uint256 nft_id, uint256 amount);
 
-Fungible token holders have the power to create proposals regarding the usage of a single token batch within MCT, and to vote on these proposals. For example, if the contract owner is an artist, FT holders can propose to use the token batch to purchase new equipment so that the artist can create better artwork for fans to enjoy. FT holders can also propose distributing a token batch to current FT holders. If no proposal wins a majority, the token batch will still be used to purchase and burn the fungible tokens in the corresponding AMM. Each proposal only applies to one token batch. Therefore, if FT holders have long-term plans for tokens in MCT, they must continually propose and vote on their preferred proposal.
+function _ntbSwap(uint256 nft_id, uint256 ethAmount) public {
+    require(ethAmount > 0, "ethAmount needs to be greater than 0");
+    require(nft_to_ntb[_nft_id] != address(0), "token pool does not exist yet");
+    swap(0x0, false, ethAmount); // swaping ETH for contract's fungible token, and burn the swapped token
+    emit NtpSwap(nft_id, ethAmount); // broadcast the swap event
+}
+```
 
 ## Automated Market Maker (AMM)
 
@@ -102,7 +103,7 @@ The A2B protocol features an Automated Market Maker (AMM), which is a decentrali
 
 The exchange is maintained by a liquidity pool holding both the fungible tokens and ETH, and by an invariance algorithm that ensures the balance between the two assets in the pool remains consistent. This relationship can be represented mathematically by the equation y = 1/x, which can be visualized in a graph as below.
 
-![](https://github.com/a2bprotocol/v0/blob/main/function_diagram.png)
+![](function_diagram.png)
 
 Initially, the exchange has no liquidity, but anyone who holds the fungible tokens of the contract can add liquidity by depositing both ETH and FTs into the pool. The first liquidity provider determines the exchange rate based on the ratio of ETH and FTs they deposit. Liquidity can also be withdrawn by liquidity providers at the current exchange rate.
 
@@ -147,10 +148,11 @@ function update(uint256 token_id, uint256 updated_Metadata_uri) { // token_id re
 
 ## Fee Structure
 
-When an A2B smart contract is created, the contract creator must pay a gas fee, but no additional fees are required for creating new contracts. Once the accumulated consumed tokens in ETH inside MCT exceeds 10 ETH, the A2B protocol will charge fees for following events,
+When an A2B smart contract is created, the contract creator must pay a gas fee, but no additional fees are required for creating new contracts. Once the accumulated NTB routed amount exceeds 10 ETH, the A2B protocol will charge fees for following event,
 
--   0.5% of the total value of every MCT mechanical consumption event
--   5% of the total amount of every newly minted fungible token
+- 0.5% of the amount of every NTB swap event
+
+- 5% of the total amount on every newly minted fungible token
 
 As discussed in the AMM section, there is also a 0.25% fee for all AMM transactions. Of this fee, 80% is distributed to liquidity pool providers and the remaining 20% goes to the A2B protocol.
 
@@ -166,11 +168,11 @@ Ariel is a digital artist who sells artwork as NFTs, and also has a loyal fan ba
 
 #### Onboarding
 
-After Ariel joins the A2B protocol, she can mint her own fungible tokens (FTs), and her new non-fungible tokens (NFTs) will be created under A2B protocol. To support her, Ariel's fans become owners of her FTs. Ariel sets a parameter for each of her NFTs which determine the amount of revenue to be distributed to the NFT token pool (NTP) royalties. Ariel also establishes a threshold for her NTP. A decentralized exchange is created for Ariel's FTs through her A2B smart contract, and she provides the initial liquidity for the exchange. Her fans then followed suit.
+After Ariel joins the A2B protocol, she can mint her own fungible tokens (FTs), and her new non-fungible tokens (NFTs) will be created under A2B protocol. To support her, Ariel's fans become owners of her FTs. Ariel sets a parameter for each of her NFTs which determine the amount of revenue to be distributed to the NFT token Buffer (NTB) royalties. Ariel also establishes a threshold for her NTB. A decentralized exchange is created for Ariel's FTs through her A2B smart contract, and she provides the initial liquidity for the exchange. Her fans then followed suit.
 
-#### Revenue Distribution
+#### Revenue Routing
 
-When Ariel's NFTs are traded and generate royalties, a predetermined portion of the royalties is directed towards the NFT Token Pool (NTP). Once the NTP accumulates enough tokens as defined by Ariel, these tokens will be used to purchase and burn Ariel's FTs. The more FTs a holder has, the more appreciation they will receive.
+When Ariel's NFTs are traded and generate royalties, a predetermined portion of the royalties is directed towards the NFT Token Buffer (NTB), then routed to the AMM to swap Ariel's FTs. The more FTs a holder has, the more appreciation they will receive.
 
 #### Decentralized Token Exchange
 
@@ -188,13 +190,13 @@ Ryan, an indie musician, has seen widespread adoption of his music as background
 
 Upon joining the A2B protocol, Ryan turns his music into NFTs and receives revenue from platforms when his music is used in short videos. Ryan also creates FTs for fans who appreciate his music and believe in his future success.
 
-#### Revenue Distribution
+#### Revenue Routing
 
-When Ryan earns revenue, a predefined portion is directed to his MCT. When the amount of revenue in Ryan's MCT reaches his defined threshold, they will be used to purchase and burn Ryan's FTs.
+When Ryan earns revenue, a predefined portion is directed to his NTBs, and then routed to swap corresponding FTs.
 
 #### Decentralized Token Exchange
 
-Ryan's fans trade his FTs on the exchange. As his music gains popularity and is featured in more short videos, more revenue is directed into MCT and burns the FTs, making Ryan's FTs more valuable and providing benefits for both Ryan and his fans. This, in turn, helps drive the growth of Ryan's music and enhances his image as a musician.
+Ryan's fans trade his FTs on the exchange. As his music gains popularity and is featured in more short videos, more revenue is directed into AMM to add liquidity for his FTs, making Ryan's FTs more valuable and providing benefits for both Ryan and his fans. This, in turn, helps drive the growth of Ryan's music and enhances his image as a musician.
 
 ### Ada (Freelancer)
 
@@ -202,15 +204,15 @@ Ada is a freelancing software developer working on various blockchain projects.
 
 #### Onboarding
 
-When Ada joins the A2B protocol, she first generates NFTs as certificates of her revenue from each project she works on. Then Ada sets a ratio on each of her NFTs. These ratios represent the percentage of income that Ada is willing to direct to MCT. Ada's followers, who trust in her expertise and project selections, become her FT holders. The A2B smart contract opens a decentralized exchange for Ada's FTs, allowing her followers to trade them.
+When Ada joins the A2B protocol, she first generates NFTs as certificates of her revenue from each project she works on. Then Ada sets a ratio on each of her NFTs. These ratios represent the percentage of income that Ada is willing to direct to NTBs. Ada's followers, who trust in her expertise and project selections, become her FT holders. The A2B smart contract opens a decentralized exchange for Ada's FTs, allowing her followers to trade them.
 
-#### Revenue Distribution
+#### Revenue Routing
 
-When Ada earns money from her blockchain projects, as represented by her NFTs, a pre-determined portion of each revenue will be redirected to her MCT. When the amount of tokens stored in Ada's MCT reaches the established threshold, these tokens will be sent to purchase and burn Ada's FTs.
+When Ada earns money from her blockchain projects, as represented by her NFTs, a pre-determined portion of each revenue will be redirected to add liquidity for corresponding liquidity pool.
 
 #### Decentralized Token Exchange
 
-Ada's fans trade her FTs through the exchange. As Ada continues to improve as a blockchain developer and earns more compensation from various projects, the revenue flowing into her MCT also increases, which in turn burns more FTs and makes FT more scarce. This process also benefits her followers.
+Ada's fans trade her FTs through the exchange. As Ada continues to improve as a blockchain developer and earns more compensation from various projects, the revenue flowing into her AMM also increases, which provides better liquidity for her FT. This process also benefits her followers.
 
 ### Joanne (Airbnb host)
 
@@ -222,10 +224,10 @@ When Joanne joins the A2B protocol, she creates an NFT to represent the revenue 
 
 The A2B smart contract also establishes a decentralized exchange for Joanne's FTs, allowing her followers to trade her FTs. Joanne can also use this exchange as a means to raise funds for improvements to her apartment.
 
-#### Revenue Distribution
+#### Revenue Routing
 
-A specified portion of the revenue generated from Airbnb will be directed to Joanne's MCT when she receives it. Once the stored token amount in Joanne's MCT exceeds the established threshold, these tokens will be used to purchase and burn Joanne's FTs.
+A specified portion of the revenue generated from Airbnb will be directed to Joanne's corresponding liquidity pool to add more liquidity.
 
 #### Decentralized Token Exchange
 
-Joanne's followers utilize the decentralized exchange to trade her FT. As Joanne improves her hosting skills, the occupancy rate of her apartment will increase, leading to higher revenue and burns more her FTs. Additionally, Joanne's FT holders will promote her apartment since the value of their FTs is affected by the revenue it generates. This will further boost the occupancy rate of Joanne's apartment.
+Joanne's followers utilize the decentralized exchange to trade her FT. As Joanne improves her hosting skills, the occupancy rate of her apartment will increase, leading to higher revenue and add more liquidity for her FTs. Additionally, Joanne's FT holders will promote her apartment since the value of their FTs is affected by the revenue it generates. This will further boost the occupancy rate of Joanne's apartment.
